@@ -24,6 +24,24 @@ enum Direction {
 };
 
 /***********************************************************************
+*                            GLOBAL VARIABLES                          *
+************************************************************************/
+//Initialize global sensor variables
+float frontSensorValue = 0;
+float leftSensorValue = 0;
+float rightSensorValue = 0;
+
+//Initialize global direction variable
+Direction hovercraftDirection;
+
+//Initialize global throttle and fan variables
+//Is it redundant to set throttle AND fans to ON/OFF??
+Throttle leftThrottle = THROTTLE_OFF;
+Throttle rightThrottle = THROTTLE_OFF;
+Fan leftFan = OFF;
+Fan rightFan = OFF;
+
+/***********************************************************************
 *                                FUNCTIONS                             *
 ************************************************************************/
 
@@ -51,7 +69,7 @@ Direction compareSensorDistances(float frontSensorValue, float leftSensorValue, 
  * Takes the direction to move the hovercraft in, the fan throttle settings, and the fan statuses as parameters, 
  * and then sets the throttle and fan settings accordingly.
  */
-void Move(Direction maxDirection, Throttle leftThrottle, Throttle rightThrottle, Fan leftFan, Fan rightFan) {
+void Move(Direction maxDirection, Fan leftFan, Fan rightFan) {
   if (maxDirection == LEFT) {
     leftThrottle = THROTTLE_OFF;
     rightThrottle = THROTTLE_MEDIUM;
@@ -75,24 +93,6 @@ void Move(Direction maxDirection, Throttle leftThrottle, Throttle rightThrottle,
   }
 }
 
-/***********************************************************************
-*                            GLOBAL VARIABLES                          *
-************************************************************************/
-//Initialize global sensor variables
-float frontSensorValue = 0;
-float leftSensorValue = 0;
-float rightSensorValue = 0;
-
-//Initialize global direction variable
-Direction hovercraftDirection;
-
-//Initialize global throttle and fan variables
-//Is it redundant to set throttle AND fans to ON/OFF??
-Throttle leftThrottle = THROTTLE_OFF;
-Throttle rightThrottle = THROTTLE_OFF;
-Fan leftFan = OFF;
-Fan rightFan = OFF;
-
 
 /***********************************************************************
 *                               MAIN CODE                              *
@@ -106,5 +106,5 @@ void setup() {
 void loop() {  
   hovercraftDirection = compareSensorDistances(frontSensorValue, leftSensorValue, rightSensorValue);
 
-  Move(hovercraftDirection, leftThrottle, rightThrottle, leftFan, rightFan);
+  Move(hovercraftDirection, leftFan, rightFan);
 }
