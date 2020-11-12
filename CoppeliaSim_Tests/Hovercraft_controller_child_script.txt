@@ -27,24 +27,27 @@ end
 --Section 1.2 **************************************************
 --Retrieve the handles of your key components
 
---Controller
-controller=sim.getObjectAssociatedWithScript(sim.handle_self)
+--controller
+controllerHandle=sim.getObjectAssociatedWithScript(sim.handle_self)
 
 --Main hovercraft body ground contact patch
-contactPatch=sim.getObjectHandle("contactPatch")
+contactPatchHandle=sim.getObjectHandle("contactPatch")
 
 --Sensor(s)
-frontSensor=sim.getObjectHandle("MB1030_Front")
-leftSensor=sim.getObjectHandle("MB1030_Left")
-rightSensor=sim.getObjectHandle("MB1030_Right")
+frontSensorHandle=sim.getObjectHandle("MB1030_Front")
+leftSensorHandle=sim.getObjectHandle("MB1030_Left")
+farLeftSensorHandle = sim.getObjectHandle("HC_SR04_Far_Left")
+rightSensorHandle=sim.getObjectHandle("MB1030_Right")
+farRightSensorHandle = sim.getObjectHandle("HC_SR04_Far_Right")
 
 --Propeller(s)
-leftFan=sim.getObjectHandle("EFB0412HA_Left")
-rightFan=sim.getObjectHandle("EFB0412HA_Right")
+thrustFanHandle=sim.getObjectHandle("EFB0412HA_Thrust")
 
 --Dedicated Lift fan
+liftFanHandle = sim.getObjectHandle("EFB0412HA_Lift")
 
 --Servo(s)
+servoHandle = sim.getObjectHandle("SmallServo_Base")
 
 --initialize IMU, only if you are using one
 
@@ -61,24 +64,35 @@ while sim.getSimulationState() ~= sim.simulation_advancing_abouttostop do
         --Use received data to control hovercraft 
     
     --SENSING section ----------------------------------------------------
-    frontSensorResult,distanceFront = read_sensor(frontSensor)
-    leftSensorResult,distanceLeft = read_sensor(leftSensor)
-    rightSensorResult,distanceRight = read_sensor(rightSensor)
+    frontSensorResult,distanceFront = read_sensor(frontSensorHandle)
+    leftSensorResult,distanceLeft = read_sensor(leftSensorHandle)
+    farLeftSensorResult,distanceFarLeft = read_sensor(farLeftSensorHandle)
+    rightSensorResult,distanceRight = read_sensor(rightSensorHandle)
+    farRightSensorResult,distanceFarRight = read_sensor(farRightSensorHandle)
     
-    if distanceFront == -1 then
-        distanceFront = 100
+    if farLeftSensorResult == 0 then
+        distanceFarLeft = 100
     end
     
-    if distanceLeft == -1 then
+    if leftSensorResult == 0 then
         distanceLeft = 100
     end
     
-    if distanceRight == -1 then
+    if frontSensorResult == 0 then
+        distanceFront = 100
+    end
+    
+    if rightSensorResult == 0 then
         distanceRight = 100
     end
     
+    if farRightSensorResult == 0 then
+        distanceFarRight = 100
+    end
+    
+    
     --After reading from sensors, send to Arduino
-    data = {distanceFront, distanceLeft, distanceRight}
+    data = {distanceFarLeft, distanceLeft, distanceFront, distanceRight, distanceFarRight}
     send_data(serial, data)
     
     
@@ -97,14 +111,14 @@ while sim.getSimulationState() ~= sim.simulation_advancing_abouttostop do
     print(receivedData)
     
     if receivedData ~= nil then
-        leftFanState = receivedData[1]
-        rightFanState = receivedData[2]
-        leftFanThrottle = receivedData[3]
-        rightFanThrottle = receivedData[4]
+        fanState = receivedData[1]
+        fanThrottle = receivedData[2]
+        servoPosition = receivedData[3]
         
-        if type(leftFanThrottle) == "number" and type(rightFanThrottle) == "number" then
-            set_thrust(leftFan, leftFanState, leftFanThrottle)
-            set_thrust(rightFan, rightFanState, rightFanThrottle)
+        if type(fanThrottle) == "number" and type(servoPosition) == "number" then
+            set_servo(servoHandle, servoPosition)
+            set_thrust(thrustFanHandle, fanState, fanThrottle)
+            set_lift(liftFanHandle, 1)
         end
     end
 
@@ -345,10 +359,10 @@ function set_lift(liftFan, liftState)
 
     if liftState == 1 and sim.getIntegerSignal('lift') == 0 then
 
-        XYSize = getBoundingBoxXYSize(body)
+        XYSize = getBoundingBoxXYSize(contactPatchHandle)
         meanRadius = (XYSize[1] + XYSize[2]) / 2 / 2
         area = XYSize[1] * XYSize[2]
-        COMlocation, COMDelta, mass = getCenterOfMass(body)
+        COMlocation, COMDelta, mass = getCenterOfMass(contactPatchHandle)
         --print("COMlocation X: "..COMlocation[1].."; COMlocation Y: ".. COMlocation[2].."; COMlocation Z: ".. COMlocation[3].."; area: "..area.."; meanRadius: "..meanRadius)
         body_pressure = mass * 9.8 * area
         fan_pressure = sim.getUserParameter(liftFan,"fanPressure")
@@ -374,21 +388,21 @@ function set_lift(liftFan, liftState)
         sim.setUserParameter(liftFan,'state',1)
         sim.setIntegerSignal('lift',1)
         
-        sim.setEngineFloatParameter(sim.newton_body_staticfriction,body,friction)
-        sim.setEngineFloatParameter(sim.newton_body_kineticfriction,body,friction)
-        sim.resetDynamicObject(body)
+        sim.setEngineFloatParameter(sim.newton_body_staticfriction,contactPatchHandle,friction)
+        sim.setEngineFloatParameter(sim.newton_body_kineticfriction,contactPatchHandle,friction)
+        sim.resetDynamicObject(contactPatchHandle)
         
     elseif liftState == 0 and sim.getIntegerSignal('lift') == 1 then
         sim.setUserParameter(liftFan,'state',0)
         sim.setIntegerSignal('lift',0)
         
-        sim.setEngineFloatParameter(sim.newton_body_staticfriction,body,0.2)
-        sim.setEngineFloatParameter(sim.newton_body_kineticfriction,body,0.09)
-        sim.resetDynamicObject(body)            
+        sim.setEngineFloatParameter(sim.newton_body_staticfriction,contactPatchHandle,0.2)
+        sim.setEngineFloatParameter(sim.newton_body_kineticfriction,contactPatchHandle,0.09)
+        sim.resetDynamicObject(contactPatchHandle)            
     end
 end
 
-function getBoundingBoxXYSize(obj)
+function getBoundingBoxXYSize(body)
     a, size1min = sim.getObjectFloatParameter(body, 15)
     a, size2min = sim.getObjectFloatParameter(body, 16)
     a, size3min = sim.getObjectFloatParameter(body, 17)

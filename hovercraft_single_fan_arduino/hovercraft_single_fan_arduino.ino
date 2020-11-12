@@ -74,17 +74,23 @@ Direction compareSensorDistances(float frontSensorValue, float leftSensorValue, 
   if (maxSensorValue == frontSensorValue) {
     return Direction::FRONT;
   }
-  else if (maxSensorValue == leftSensorValue) {
-    return Direction::LEFT;
-  }
   else if (maxSensorValue == farLeftSensorValue) {
-    return Direction::FAR_LEFT;
-  }
-  else if (maxSensorValue == rightSensorValue) {
-    return Direction::RIGHT;
+    if (maxSensorValue == leftSensorValue) {
+      return Direction::LEFT;
+    }
+    else {
+      return Direction::FAR_LEFT;  
+    }
   }
   else if (maxSensorValue == farRightSensorValue) {
-    return Direction::FAR_RIGHT;
+    if(maxSensorValue == rightSensorValue) {
+      return Direction::RIGHT;
+    }
+    else {
+      return Direction::FAR_RIGHT;
+    }
+    
+    return Direction::RIGHT;
   }
   else {
     return Direction::ERR;
@@ -141,13 +147,13 @@ void ConvertPosition(ServoPosition servoPosition) {
         convertedPosition = -pi/3;
         break;
       case SERVO_LEFT:
-        convertedPosition = -pi/5;
+        convertedPosition = -pi/8;
         break;
       case SERVO_CENTER:
         convertedPosition = 0;
         break;
       case SERVO_RIGHT:
-        convertedPosition = pi/5;
+        convertedPosition = pi/8;
         break;
       case SERVO_FAR_RIGHT:
         convertedPosition = pi/3;
