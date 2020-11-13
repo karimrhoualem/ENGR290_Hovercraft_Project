@@ -89,7 +89,11 @@ Direction compareSensorDistances(float frontSensorValue, float leftSensorValue, 
     else {
       return Direction::FAR_RIGHT;
     }
-    
+  }
+  else if(maxSensorValue == leftSensorValue) {
+    return Direction::LEFT;
+  }
+  else if(maxSensorValue == rightSensorValue) {
     return Direction::RIGHT;
   }
   else {
@@ -108,15 +112,15 @@ void Move(Direction maxDirection) {
   }
   else if (maxDirection == LEFT) {
     servoPosition = SERVO_RIGHT;
-    fanThrottle = THROTTLE_MEDIUM;
+    fanThrottle = THROTTLE_HIGH;
   }
   else if (maxDirection == FRONT) {
     servoPosition = SERVO_CENTER;
-    fanThrottle = THROTTLE_MEDIUM;
+    fanThrottle = THROTTLE_HIGH;
   }
   else if (maxDirection == RIGHT) {
     servoPosition = SERVO_LEFT;
-    fanThrottle = THROTTLE_MEDIUM;
+    fanThrottle = THROTTLE_HIGH;
   }
   else if (maxDirection == FAR_RIGHT) {
     servoPosition = SERVO_FAR_LEFT;
@@ -144,19 +148,19 @@ void ConvertThrottle(Throttle fanThrottle) {
 void ConvertPosition(ServoPosition servoPosition) {
   switch (servoPosition) {
       case SERVO_FAR_LEFT:
-        convertedPosition = -pi/3;
+        convertedPosition = -pi/3.5;
         break;
       case SERVO_LEFT:
-        convertedPosition = -pi/8;
+        convertedPosition = -pi/6;
         break;
       case SERVO_CENTER:
         convertedPosition = 0;
         break;
       case SERVO_RIGHT:
-        convertedPosition = pi/8;
+        convertedPosition = pi/6;
         break;
       case SERVO_FAR_RIGHT:
-        convertedPosition = pi/3;
+        convertedPosition = pi/3.5;
         break;
     }
 }
