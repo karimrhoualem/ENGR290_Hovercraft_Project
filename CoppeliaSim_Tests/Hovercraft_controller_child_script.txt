@@ -93,7 +93,7 @@ while sim.getSimulationState() ~= sim.simulation_advancing_abouttostop do
     
     
     --After reading from sensors, send to Arduino
-    data = {distanceFarLeft, distanceLeft, distanceFront, distanceRight, distanceFarRight, angVel, linAccel}
+    data = {distanceFarLeft, distanceLeft, distanceFront, distanceRight, distanceFarRight, angVel[1]}
     send_data(serial, data)
     
     
