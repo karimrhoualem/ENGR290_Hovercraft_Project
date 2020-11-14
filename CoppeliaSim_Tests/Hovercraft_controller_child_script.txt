@@ -50,7 +50,7 @@ liftFanHandle = sim.getObjectHandle("EFB0412HA_Lift")
 servoHandle = sim.getObjectHandle("SmallServo_Base")
 
 --initialize IMU, only if you are using one
-
+imu_init()
 
 --**************************************************************
 
@@ -69,6 +69,7 @@ while sim.getSimulationState() ~= sim.simulation_advancing_abouttostop do
     farLeftSensorResult,distanceFarLeft = read_sensor(farLeftSensorHandle)
     rightSensorResult,distanceRight = read_sensor(rightSensorHandle)
     farRightSensorResult,distanceFarRight = read_sensor(farRightSensorHandle)
+    angVel, linAccel = read_imu()
     
     if farLeftSensorResult == 0 then
         distanceFarLeft = 100
@@ -92,7 +93,7 @@ while sim.getSimulationState() ~= sim.simulation_advancing_abouttostop do
     
     
     --After reading from sensors, send to Arduino
-    data = {distanceFarLeft, distanceLeft, distanceFront, distanceRight, distanceFarRight}
+    data = {distanceFarLeft, distanceLeft, distanceFront, distanceRight, distanceFarRight, angVel, linAccel}
     send_data(serial, data)
     
     
