@@ -59,6 +59,9 @@ float convertedPosition;
 //Initialize the global fan state variable
 Fan fanState = ON;
 
+//Initialize the global IMU variable
+float angularVelocity_x;
+
 /***********************************************************************
 *                                FUNCTIONS                             *
 ************************************************************************/
@@ -131,6 +134,13 @@ void Move(Direction maxDirection) {
   }
 }
 
+//IMU detect ramps
+void RampDetect(float angularVelocity_x){
+  if (angularVelocity_x < -0.005 || angularVelocity_x > 0.005){
+    fanThrottle = THROTTLE_HIGH;
+  }
+}
+
 void ConvertThrottle(Throttle fanThrottle) {
     switch (fanThrottle) {
       case THROTTLE_OFF:
@@ -197,10 +207,12 @@ void loop() {
   frontSensorValue = Serial.parseFloat();
   rightSensorValue = Serial.parseFloat();
   farRightSensorValue = Serial.parseFloat();
+  angularVelocity_x = Serial.parseFloat();
   
   hovercraftDirection = compareSensorDistances(frontSensorValue, leftSensorValue, farLeftSensorValue, rightSensorValue, farRightSensorValue);
 
   Move(hovercraftDirection);
+  RampDetect(angularVelocity_x);
 
   ConvertThrottle(fanThrottle);
   ConvertPosition(servoPosition);
