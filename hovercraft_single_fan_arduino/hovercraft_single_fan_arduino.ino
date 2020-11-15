@@ -2,6 +2,7 @@
 *                                   ENUMS                              *
 ************************************************************************/
 const float pi = 3.1415926;
+const float epsilon = 0.001;
 
 // Enum that specifies the current fan setting.
 enum Fan {
@@ -38,6 +39,10 @@ enum ServoPosition {
 /***********************************************************************
 *                            GLOBAL VARIABLES                          *
 ************************************************************************/
+//Initialize simulations times
+float simTime;
+float previousSimTime;
+
 //Initialize global sensor variables
 float frontSensorValue;
 float leftSensorValue;
@@ -45,19 +50,35 @@ float farLeftSensorValue;
 float rightSensorValue;
 float farRightSensorValue;
 
+//Initialize previous global sensor values
+float previousFrontSensorValue = 0;
+float previousLeftSensorValue = 0;
+float previousFarLeftSensorValue = 0;
+float previousRightSensorValue = 0;
+float previousFarRightSensorValue = 0;
+
 //Initialize global direction variable
 Direction hovercraftDirection;
+Direction previousHovercraftDirection = FRONT;
 
 //Initialize global throttle and fan variables
-Throttle fanThrottle;
+Throttle fanThrottle = THROTTLE_HIGH;
 float convertedThrottle;
 
 //Initialize the global servo variable
 ServoPosition servoPosition;
+ServoPosition previousServoPosition;
 float convertedPosition;
 
 //Initialize the global fan state variable
 Fan fanState = ON;
+
+//Boolean value to determine whether hovercraft is stuck
+bool stuck = false;
+
+float maxSensorValue = 0;
+float minSensorValue = 0;
+String closest;
 
 /***********************************************************************
 *                                FUNCTIONS                             *
@@ -69,18 +90,35 @@ Direction compareSensorDistances(float frontSensorValue, float leftSensorValue, 
   float maxSideSensorValue = max(leftSensorValue, rightSensorValue);
   float maxFarSideSensorValue = max(farLeftSensorValue, farRightSensorValue);
   float maxSide = max(maxSideSensorValue, maxFarSideSensorValue);
-  float maxSensorValue = max(maxSide, frontSensorValue);
+  maxSensorValue = max(maxSide, frontSensorValue);
+
+  float minSideSensorValue = min(leftSensorValue, rightSensorValue);
+  float minFarSideSensorValue = min(farLeftSensorValue, farRightSensorValue);
+  float minSide = min(minSideSensorValue, minFarSideSensorValue);
+  minSensorValue = min(minSide, frontSensorValue);
+  
+  if(abs(previousFarLeftSensorValue - farLeftSensorValue) <= epsilon && abs(previousLeftSensorValue - leftSensorValue) <= epsilon && abs(previousFrontSensorValue - frontSensorValue) <= epsilon &&
+      abs(previousRightSensorValue - rightSensorValue) <= epsilon && abs(previousFarRightSensorValue - farRightSensorValue) <= epsilon) {
+
+        if (minSensorValue == leftSensorValue || minSensorValue == farLeftSensorValue) {
+          closest = "left";
+        }
+        else if(minSensorValue == rightSensorValue || minSensorValue == farRightSensorValue) {
+          closest = "right";
+        }
+        else {
+          closest = "front";
+        }
+        
+        stuck = true;
+
+        return previousHovercraftDirection;
+  }
+
+  stuck = false;
   
   if (maxSensorValue == frontSensorValue) {
     return Direction::FRONT;
-  }
-  else if (maxSensorValue == farLeftSensorValue) {
-    if (maxSensorValue == leftSensorValue) {
-      return Direction::LEFT;
-    }
-    else {
-      return Direction::FAR_LEFT;  
-    }
   }
   else if (maxSensorValue == farRightSensorValue) {
     if(maxSensorValue == rightSensorValue) {
@@ -90,11 +128,19 @@ Direction compareSensorDistances(float frontSensorValue, float leftSensorValue, 
       return Direction::FAR_RIGHT;
     }
   }
-  else if(maxSensorValue == leftSensorValue) {
-    return Direction::LEFT;
+  else if (maxSensorValue == farLeftSensorValue) {
+    if (maxSensorValue == leftSensorValue) {
+      return Direction::LEFT;
+    }
+    else {
+      return Direction::FAR_LEFT;  
+    }
   }
   else if(maxSensorValue == rightSensorValue) {
     return Direction::RIGHT;
+  }
+  else if(maxSensorValue == leftSensorValue) {
+    return Direction::LEFT;
   }
   else {
     return Direction::ERR;
@@ -108,7 +154,7 @@ Direction compareSensorDistances(float frontSensorValue, float leftSensorValue, 
 void Move(Direction maxDirection) {
   if (maxDirection == FAR_LEFT) {
     servoPosition = SERVO_FAR_RIGHT;
-    fanThrottle = THROTTLE_MEDIUM;
+    fanThrottle = THROTTLE_HIGH;
   }
   else if (maxDirection == LEFT) {
     servoPosition = SERVO_RIGHT;
@@ -124,12 +170,37 @@ void Move(Direction maxDirection) {
   }
   else if (maxDirection == FAR_RIGHT) {
     servoPosition = SERVO_FAR_LEFT;
-    fanThrottle = THROTTLE_MEDIUM;
+    fanThrottle = THROTTLE_HIGH;
   }
   else if (maxDirection == ERR) {
     //Handle error
   }
 }
+
+float MoveStuck() {
+  if(closest == "left") {
+    if(farLeftSensorValue > farRightSensorValue || leftSensorValue > rightSensorValue || frontSensorValue < (leftSensorValue && rightSensorValue)) {
+      return -pi/2;    
+    }
+    return pi/2;
+  }
+  else if(closest == "right") {
+    if(farLeftSensorValue > farRightSensorValue || leftSensorValue > rightSensorValue || frontSensorValue < (leftSensorValue && rightSensorValue)) {
+      return pi/2;    
+    }
+    return -pi/2;
+  }
+  else if(closest == "front") {
+    if(farLeftSensorValue > farRightSensorValue || leftSensorValue > rightSensorValue || frontSensorValue < (leftSensorValue && rightSensorValue)) {
+      return pi/2;    
+    }
+    return -pi/2;
+  }
+  else {
+    return 0;
+  }
+}
+
 
 void ConvertThrottle(Throttle fanThrottle) {
     switch (fanThrottle) {
@@ -148,19 +219,19 @@ void ConvertThrottle(Throttle fanThrottle) {
 void ConvertPosition(ServoPosition servoPosition) {
   switch (servoPosition) {
       case SERVO_FAR_LEFT:
-        convertedPosition = -pi/3.5;
+        convertedPosition = -pi/3;
         break;
       case SERVO_LEFT:
-        convertedPosition = -pi/6;
+        convertedPosition = -pi/9;
         break;
       case SERVO_CENTER:
         convertedPosition = 0;
         break;
       case SERVO_RIGHT:
-        convertedPosition = pi/6;
+        convertedPosition = pi/9;
         break;
       case SERVO_FAR_RIGHT:
-        convertedPosition = pi/3.5;
+        convertedPosition = pi/3;
         break;
     }
 }
@@ -191,7 +262,7 @@ void serialWait(){
 void loop() { 
   //Read serial port until sensor data is sent
   serialWait();
-
+  
   farLeftSensorValue = Serial.parseFloat();
   leftSensorValue = Serial.parseFloat();
   frontSensorValue = Serial.parseFloat();
@@ -200,15 +271,30 @@ void loop() {
   
   hovercraftDirection = compareSensorDistances(frontSensorValue, leftSensorValue, farLeftSensorValue, rightSensorValue, farRightSensorValue);
 
-  Move(hovercraftDirection);
+  if(stuck) {
+    delay(200);
+    convertedPosition = MoveStuck();
+  }
+  else {
+    Move(hovercraftDirection);
+    ConvertPosition(servoPosition);
+  }
 
   ConvertThrottle(fanThrottle);
-  ConvertPosition(servoPosition);
+
+  previousFrontSensorValue = frontSensorValue; 
+  previousLeftSensorValue = leftSensorValue;
+  previousFarLeftSensorValue = farLeftSensorValue;
+  previousRightSensorValue = rightSensorValue;
+  previousFarRightSensorValue = farRightSensorValue;
+  previousHovercraftDirection = hovercraftDirection;
   
   Serial.print(fanState);
   Serial.write(",");
   Serial.print(convertedThrottle);
   Serial.write(",");
   Serial.print(convertedPosition);
+  Serial.write(",");
+  Serial.print(stuck);
   Serial.write("\r\n");
 }
