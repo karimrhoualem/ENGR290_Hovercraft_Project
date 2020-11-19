@@ -94,6 +94,12 @@ String closest;
 // Takes the sensor values as parameters, finds the max, and then positions the hovercraft towards the max direction.
 Direction compareSensorDistances(float simTime, float angularVelocity_z, float frontSensorValue, float leftSensorValue, float farLeftSensorValue, float rightSensorValue, float farRightSensorValue) {
 
+  if(adjust){
+    adjust = false;
+    return Direction::RIGHT;
+  }
+
+
   if(FullCircle(simTime, angularVelocity_z)){
     return Direction::FRONT;
   }
@@ -243,13 +249,13 @@ void ConvertPosition(ServoPosition servoPosition) {
         convertedPosition = -pi/3;
         break;
       case SERVO_LEFT:
-        convertedPosition = -pi/9;
+        convertedPosition = -pi/7;
         break;
       case SERVO_CENTER:
         convertedPosition = 0;
         break;
       case SERVO_RIGHT:
-        convertedPosition = pi/9;
+        convertedPosition = pi/7;
         break;
       case SERVO_FAR_RIGHT:
         convertedPosition = pi/3;
@@ -259,7 +265,7 @@ void ConvertPosition(ServoPosition servoPosition) {
 bool FullCircle(float simTime, float angularVelocity_z){
 
   angularPosition += ((angularVelocity_z + previousangularVelocity_z)/2)*(simTime - previoussimTime);
-  previousangularVelocity_z;
+  previousangularVelocity_z=angularVelocity_z;
   previoussimTime = simTime;
 
   if(  abs(angularPosition) > 0.09 ){
@@ -308,11 +314,6 @@ void loop() {
   //angularVelocity_x = Serial.parseFloar();
 
   
-
-  if(adjust){
-    convertedPosition = 0.5;
-    adjust = false;
-  }
 
   FullCircle(simTime, angularVelocity_z);
 
